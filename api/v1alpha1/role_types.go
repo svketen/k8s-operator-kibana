@@ -20,16 +20,70 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // RoleSpec defines the desired state of Role
 type RoleSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Prefix string `json:"prefix,omitempty"`
 
-	// Foo is an example field of Role. Edit role_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Suffix string `json:"suffix,omitempty"`
+
+	Connection Connection `json:"connection,omitempty"`
+
+	Roles []KibanaRole `json:"roles,omitempty"`
+}
+
+type Connection struct {
+	Credentials `json:",inline"`
+
+	URL string `json:"url,omitempty"`
+
+	Port int32 `json:"port,omitempty"`
+}
+
+type Credentials struct {
+	Username string `json:"username,omitempty"`
+
+	PasswordRef string `json:"passwordRef,omitempty"`
+}
+
+type KibanaRole struct {
+	Name string `json:"name,omitempty"`
+
+	Elasticsearch Elasticsearch `json:"elasticsearch,omitempty"`
+
+	Kibana []Kibana `json:"kibana,omitempty"`
+}
+
+type Elasticsearch struct {
+	Name string `json:"name,omitempty"`
+
+	ClusterPrivileges []string `json:"cluster,omitempty"`
+
+	RunAsPrivileges []string `json:"run_as,omitempty"`
+
+	IndexPrivileges []IndexPrivileges `json:"indices,omitempty"`
+}
+
+type IndexPrivileges struct {
+	Names []string `json:"names,omitempty"`
+
+	Privileges []string `json:"privileges,omitempty"`
+
+	AllowRestrictedIndices bool `json:"allow_restricted_indices,omitempty"`
+}
+
+type Kibana struct {
+	Base    []string      `json:"base,omitempty"`
+	Feature KibanaFeature `json:"feature,omitempty"`
+	Spaces  []string      `json:"spaces,omitempty"`
+}
+
+type KibanaFeature struct {
+	AdvancedSettings       []string `json:"advancedSettings,omitempty"`
+	Dashboard              []string `json:"dashboard,omitempty"`
+	Discover               []string `json:"discover,omitempty"`
+	IndexPatterns          []string `json:"indexPatterns,omitempty"`
+	SavedObjectsManagement []string `json:"savedObjectsManagement,omitempty"`
+	Visualize              []string `json:"visualize,omitempty"`
 }
 
 // RoleStatus defines the observed state of Role

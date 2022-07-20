@@ -1,0 +1,137 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.0
+  creationTimestamp: null
+  name: roles.kibana.k8s.svketen.dev
+spec:
+  group: kibana.k8s.svketen.dev
+  names:
+    kind: Role
+    listKind: RoleList
+    plural: roles
+    singular: role
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Role is the Schema for the roles API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: RoleSpec defines the desired state of Role
+            properties:
+              connection:
+                properties:
+                  passwordRef:
+                    type: string
+                  port:
+                    format: int32
+                    type: integer
+                  url:
+                    type: string
+                  username:
+                    type: string
+                type: object
+              prefix:
+                type: string
+              roles:
+                items:
+                  properties:
+                    elasticsearch:
+                      properties:
+                        cluster:
+                          items:
+                            type: string
+                          type: array
+                        indices:
+                          items:
+                            properties:
+                              allow_restricted_indices:
+                                type: boolean
+                              names:
+                                items:
+                                  type: string
+                                type: array
+                              privileges:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          type: array
+                        name:
+                          type: string
+                        run_as:
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    kibana:
+                      items:
+                        properties:
+                          base:
+                            items:
+                              type: string
+                            type: array
+                          feature:
+                            properties:
+                              advancedSettings:
+                                items:
+                                  type: string
+                                type: array
+                              dashboard:
+                                items:
+                                  type: string
+                                type: array
+                              discover:
+                                items:
+                                  type: string
+                                type: array
+                              indexPatterns:
+                                items:
+                                  type: string
+                                type: array
+                              savedObjectsManagement:
+                                items:
+                                  type: string
+                                type: array
+                              visualize:
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          spaces:
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      type: array
+                    name:
+                      type: string
+                  type: object
+                type: array
+              suffix:
+                type: string
+            type: object
+          status:
+            description: RoleStatus defines the observed state of Role
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

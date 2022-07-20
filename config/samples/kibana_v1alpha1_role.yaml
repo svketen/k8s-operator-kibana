@@ -3,4 +3,39 @@ kind: Role
 metadata:
   name: role-sample
 spec:
-  # TODO(user): Add fields here
+  prefix: 'my-'
+  suffix: ' (automated)'
+  connection:
+    username: elastic
+    passwordRef: logging-es-elastic-user
+    url: http://loggingkibana-kb-http.logging:5601
+  roles:
+    - name: argo-cd
+      elasticsearch:
+        cluster: [ ]
+        indices:
+          - names:
+              - argo-cd-*
+            privileges:
+              - read
+              - read_cross_cluster
+              - view_index_metadata
+            allow_restricted_indices: false
+        run_as: [ ]
+      kibana:
+        - base: [ ]
+          feature:
+            advancedSettings:
+              - all
+            dashboard:
+              - all
+            discover:
+              - all
+            indexPatterns:
+              - all
+            savedObjectsManagement:
+              - all
+            visualize:
+              - all
+          spaces:
+            - argo-cd
