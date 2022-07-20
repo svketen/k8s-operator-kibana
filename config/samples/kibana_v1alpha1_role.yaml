@@ -1,0 +1,6 @@
+apiVersion: kibana.k8s.svketen.dev/v1alpha1
+kind: Role
+metadata:
+  name: role-sample
+spec:
+  # TODO(user): Add fields here

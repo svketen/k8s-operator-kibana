@@ -3,4 +3,14 @@ layout:
 - go.kubebuilder.io/v3
 projectName: k8s-operator-kibana
 repo: k8s.svketen.dev
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: k8s.svketen.dev
+  group: kibana
+  kind: Role
+  path: k8s.svketen.dev/api/v1alpha1
+  version: v1alpha1
 version: "3"
