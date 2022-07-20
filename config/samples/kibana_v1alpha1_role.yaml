@@ -4,7 +4,7 @@ metadata:
   name: role-sample
 spec:
   prefix: 'my-'
-  suffix: ' (automated)'
+  suffix: '-automated'
   connection:
     username: elastic
     passwordRef: logging-es-elastic-user

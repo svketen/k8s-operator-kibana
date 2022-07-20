@@ -39,3 +39,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - kibana.k8s.svketen.dev
+  resources:
+  - spaces
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kibana.k8s.svketen.dev
+  resources:
+  - spaces/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - kibana.k8s.svketen.dev
+  resources:
+  - spaces/status
+  verbs:
+  - get
+  - patch
+  - update

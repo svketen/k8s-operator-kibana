@@ -22,12 +22,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-logr/logr"
-	"io"
-	"io/ioutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"net/http"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -114,7 +111,7 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	logger.Info("Synchronizing current/expected roles...")
 	expectedRoles := role.Spec.Roles
 	for _, expectedRole := range expectedRoles {
-		roleName := GetRoleName(prefix, expectedRole.Name, suffix)
+		roleName := GetFullName(prefix, expectedRole.Name, suffix)
 		logger.Info("Processing role <" + roleName + ">...")
 		if _, ok := currentRoleNameToRole[roleName]; ok {
 			logger.Info("Updating current role <" + roleName + ">...")
@@ -158,65 +155,6 @@ func CreateOrUpdateRole(logger logr.Logger, url string, username string, passwor
 	}
 
 	return result, nil
-}
-
-func GetRequest(logger logr.Logger, url string, username string, password string, body io.Reader, result any) error {
-	logger.Info("Sending GET to <" + url + ">")
-	// url := URL + "/api/security/role"
-	request, err := http.NewRequest("GET", url, body)
-	if err != nil {
-		return err
-	}
-
-	bodyText, err := SendRequest(logger, request, username, password)
-	if err != nil {
-		return err
-	}
-
-	return json.Unmarshal(bodyText, result)
-}
-
-func PutRequest(logger logr.Logger, url string, username string, password string, body io.Reader) ([]byte, error) {
-	logger.Info("Sending PUT to <" + url + ">")
-
-	request, err := http.NewRequest("PUT", url, body)
-	if err != nil {
-		return nil, err
-	}
-
-	bodyText, err := SendRequest(logger, request, username, password)
-	if err != nil {
-		return nil, err
-	}
-
-	return bodyText, nil
-}
-
-func SendRequest(logger logr.Logger, request *http.Request, username string, password string) ([]byte, error) {
-	logger.Info("Sending request...")
-
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("kbn-xsrf", "true")
-	request.SetBasicAuth(username, password)
-
-	httpClient := &http.Client{}
-	response, err := httpClient.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	// TODO handle status code 4xx 5xx
-	logger.Info("Response <" + response.Status + ">")
-
-	bodyText, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	return bodyText, nil
-}
-
-func GetRoleName(prefix string, name string, suffix string) string {
-	return prefix + name + suffix
 }
 
 type Role struct {

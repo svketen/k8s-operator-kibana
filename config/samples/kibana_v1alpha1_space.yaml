@@ -1,0 +1,33 @@
+apiVersion: kibana.k8s.svketen.dev/v1alpha1
+kind: Space
+metadata:
+  name: space-sample
+spec:
+  prefix: 'my-'
+  suffix: '-automated'
+  connection:
+    username: elastic
+    passwordRef: logging-es-elastic-user
+    url: http://loggingkibana-kb-http.logging:5601
+  spaces:
+  - id: 'argo-cd'
+    name: 'argo-cd'
+    description: 'argo-cd'
+    disabledFeatures:
+    - canvas
+    - maps
+    - ml
+    - visualize
+    - enterpriseSearch
+    - logs
+    - infrastructure
+    - apm
+    - uptime
+    - observabilityCases
+    - siem
+    - monitoring
+    - fleet
+    - stackAlerts
+    - actions
+    - osquery
+    - savedObjectsTagging
