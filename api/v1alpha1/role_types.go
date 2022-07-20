@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -97,4 +98,14 @@ type RoleList struct {
 
 func init() {
 	SchemeBuilder.Register(&Role{}, &RoleList{})
+}
+
+func IsKibanaRoleEqual(first KibanaRole, second KibanaRole) bool {
+	if !equality.Semantic.DeepEqual(first.Kibana, second.Kibana) {
+		return false
+	}
+	if !equality.Semantic.DeepEqual(first.Elasticsearch, second.Elasticsearch) {
+		return false
+	}
+	return true
 }

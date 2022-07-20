@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -66,4 +67,14 @@ type SpaceList struct {
 
 func init() {
 	SchemeBuilder.Register(&Space{}, &SpaceList{})
+}
+
+func IsKibanaSpaceEqual(first KibanaSpace, second KibanaSpace) bool {
+	if !equality.Semantic.DeepEqual(first.Description, second.Description) {
+		return false
+	}
+	if !equality.Semantic.DeepEqual(first.DisabledFeatures, second.DisabledFeatures) {
+		return false
+	}
+	return true
 }

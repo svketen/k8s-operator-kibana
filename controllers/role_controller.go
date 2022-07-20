@@ -83,9 +83,9 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	namespace := role.Namespace
 	config := role.Spec.Config
 	expectedValues := role.Spec.Roles
-	var actualValues []Role
+	var actualValues []kibanav1alpha1.KibanaRole
 	url := config.Connection.URL + "/api/security/role"
-	actualKeyToValue := make(map[string]Role)
+	actualKeyToValue := make(map[string]kibanav1alpha1.KibanaRole)
 
 	logger.Info("Reading credentials...")
 	username := config.Connection.Credentials.Username
@@ -119,11 +119,17 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		logger.Info("Processing value <" + id + ">...")
 		if _, ok := actualKeyToValue[id]; ok {
 			logger.Info("Updating current value <" + id + ">...")
-			_, err = CreateOrUpdateRole(logger, url, username, password, id, expectedValue)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("error while updating value: %w", err)
+			actualValue := actualKeyToValue[id]
+			if !kibanav1alpha1.IsKibanaRoleEqual(actualValue, expectedValue) {
+				logger.Info("Updating current value <" + id + ">...")
+				_, err = CreateOrUpdateRole(logger, url, username, password, id, expectedValue)
+				if err != nil {
+					return ctrl.Result{}, fmt.Errorf("error while updating value: %w", err)
+				}
+				updated += 1
+			} else {
+				logger.Info("Skipped update because actual value as specified <" + id + ">.")
 			}
-			updated += 1
 		} else {
 			logger.Info("Creating expected role <" + id + ">...")
 			_, err = CreateOrUpdateRole(logger, url, username, password, id, expectedValue)
@@ -137,8 +143,7 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// Update status if needed
 	if (created + updated) > 0 {
 		role.Status.Created += created
-		// TODO add deep equals check to update before updating value to avoid endless loop
-		// role.Status.Updated += updated
+		role.Status.Updated += updated
 		err := r.Status().Update(ctx, role)
 		if err != nil {
 			logger.Error(err, "Failed to update status")
@@ -157,7 +162,7 @@ func (r *RoleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func CreateOrUpdateRole(logger logr.Logger, url string, username string, password string, roleName string, roleSpec kibanav1alpha1.KibanaRole) ([]byte, error) {
-	role := Role{}
+	role := kibanav1alpha1.KibanaRole{}
 	role.Kibana = roleSpec.Kibana
 	role.Elasticsearch = roleSpec.Elasticsearch
 
@@ -172,10 +177,4 @@ func CreateOrUpdateRole(logger logr.Logger, url string, username string, passwor
 	}
 
 	return result, nil
-}
-
-type Role struct {
-	Name          string                       `json:"name,omitempty"`
-	Elasticsearch kibanav1alpha1.Elasticsearch `json:"elasticsearch,omitempty"`
-	Kibana        []kibanav1alpha1.Kibana      `json:"kibana,omitempty"`
 }

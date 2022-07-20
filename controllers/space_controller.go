@@ -84,9 +84,9 @@ func (r *SpaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	namespace := space.Namespace
 	config := space.Spec.Config
 	expectedValues := space.Spec.Spaces
-	var actualValues []Space
+	var actualValues []kibanav1alpha1.KibanaSpace
 	url := config.Connection.URL + "/api/spaces/space"
-	actualKeyToValue := make(map[string]Space)
+	actualKeyToValue := make(map[string]kibanav1alpha1.KibanaSpace)
 
 	logger.Info("Reading credentials...")
 	username := config.Connection.Credentials.Username
@@ -120,11 +120,17 @@ func (r *SpaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		logger.Info("Processing value <" + id + ">...")
 		if _, ok := actualKeyToValue[id]; ok {
 			logger.Info("Updating current value <" + id + ">...")
-			_, err = UpdateSpace(logger, url, username, password, id, expectedValue)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("error while updating value: %w", err)
+			actualValue := actualKeyToValue[id]
+			if !kibanav1alpha1.IsKibanaSpaceEqual(actualValue, expectedValue) {
+				logger.Info("Updating current value <" + id + ">...")
+				_, err = UpdateSpace(logger, url, username, password, id, expectedValue)
+				if err != nil {
+					return ctrl.Result{}, fmt.Errorf("error while updating value: %w", err)
+				}
+				updated += 1
+			} else {
+				logger.Info("Skipped update because actual value as specified <" + id + ">.")
 			}
-			updated += 1
 		} else {
 			logger.Info("Creating expected space <" + id + ">...")
 			_, err = CreateSpace(logger, url, username, password, id, expectedValue)
@@ -138,8 +144,7 @@ func (r *SpaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	// Update status if needed
 	if (created + updated) > 0 {
 		space.Status.Created += created
-		// TODO add deep equals check to update before updating value to avoid endless loop
-		// space.Status.Updated += updated
+		space.Status.Updated += updated
 		err := r.Status().Update(ctx, space)
 		if err != nil {
 			logger.Error(err, "Failed to update status")
@@ -158,9 +163,10 @@ func (r *SpaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func CreateSpace(logger logr.Logger, url string, username string, password string, spaceId string, spaceSpec kibanav1alpha1.KibanaSpace) ([]byte, error) {
-	space := Space{}
+	space := kibanav1alpha1.KibanaSpace{}
 	space.Id = spaceId
 	space.Name = spaceSpec.Name
+	space.Description = spaceSpec.Description
 	space.DisabledFeatures = spaceSpec.DisabledFeatures
 
 	body, err := json.Marshal(space)
@@ -177,7 +183,7 @@ func CreateSpace(logger logr.Logger, url string, username string, password strin
 }
 
 func UpdateSpace(logger logr.Logger, url string, username string, password string, spaceId string, spaceSpec kibanav1alpha1.KibanaSpace) ([]byte, error) {
-	space := Space{}
+	space := kibanav1alpha1.KibanaSpace{}
 	space.Id = spaceId
 	space.Name = spaceId
 	space.Description = spaceSpec.Description
@@ -194,11 +200,4 @@ func UpdateSpace(logger logr.Logger, url string, username string, password strin
 	}
 
 	return result, nil
-}
-
-type Space struct {
-	Id               string   `json:"id,omitempty"`
-	Name             string   `json:"name,omitempty"`
-	Description      string   `json:"description,omitempty"`
-	DisabledFeatures []string `json:"disabledFeatures,omitempty"`
 }
