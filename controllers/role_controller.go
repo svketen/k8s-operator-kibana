@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/go-logr/logr"
 	"io"
 	"io/ioutil"
@@ -45,6 +46,7 @@ type RoleReconciler struct {
 //+kubebuilder:rbac:groups=kibana.k8s.svketen.dev,resources=roles,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=kibana.k8s.svketen.dev,resources=roles/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=kibana.k8s.svketen.dev,resources=roles/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -68,7 +70,17 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			logger.Info("Resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
+
+		return ctrl.Result{}, fmt.Errorf("get role CR error: %w", err)
 	}
+
+	// Check if it is being deleted
+	if !role.ObjectMeta.DeletionTimestamp.IsZero() {
+		logger.Info("Ignoring since resource is being deleted.", "name", req.NamespacedName)
+
+		return ctrl.Result{}, nil
+	}
+
 	prefix := role.Spec.Prefix
 	suffix := role.Spec.Suffix
 	namespace := role.Namespace
@@ -79,8 +91,7 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	passwordRef := role.Spec.Connection.Credentials.PasswordRef
 	err = r.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: passwordRef}, secret)
 	if err != nil {
-		// TODO handle error
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("error while reading credentials: %w", err)
 	}
 	password := string(secret.Data[username])
 
@@ -89,8 +100,7 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	url := role.Spec.Connection.URL + "/api/security/role"
 	err = GetRequest(logger, url, username, password, nil, &currentRoles)
 	if err != nil {
-		// TODO handle error
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("error while reading current roles error: %w", err)
 	}
 	currentRoleNameToRole := make(map[string]Role)
 	for _, currentRole := range currentRoles {
@@ -110,15 +120,13 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			logger.Info("Updating current role <" + roleName + ">...")
 			_, err = CreateOrUpdateRole(logger, url, username, password, roleName, expectedRole)
 			if err != nil {
-				// TODO handle error
-				return ctrl.Result{}, err
+				return ctrl.Result{}, fmt.Errorf("error while updating role: %w", err)
 			}
 		} else {
 			logger.Info("Creating expected role <" + roleName + ">...")
 			_, err = CreateOrUpdateRole(logger, url, username, password, roleName, expectedRole)
 			if err != nil {
-				// TODO handle error
-				return ctrl.Result{}, err
+				return ctrl.Result{}, fmt.Errorf("error while creating role: %w", err)
 			}
 		}
 	}
