@@ -1,0 +1,6 @@
+domain: k8s.svketen.dev
+layout:
+- go.kubebuilder.io/v3
+projectName: k8s-operator-kibana
+repo: k8s.svketen.dev
+version: "3"
