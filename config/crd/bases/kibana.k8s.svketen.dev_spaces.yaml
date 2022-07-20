@@ -69,6 +69,13 @@ spec:
             type: object
           status:
             description: SpaceStatus defines the observed state of Space
+            properties:
+              created:
+                format: int32
+                type: integer
+              updated:
+                format: int32
+                type: integer
             type: object
         type: object
     served: true

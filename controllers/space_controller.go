@@ -82,54 +82,71 @@ func (r *SpaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	prefix := space.Spec.Prefix
 	suffix := space.Spec.Suffix
 	namespace := space.Namespace
+	config := space.Spec.Config
+	expectedValues := space.Spec.Spaces
+	var actualValues []Space
+	url := config.Connection.URL + "/api/spaces/space"
+	actualKeyToValue := make(map[string]Space)
 
 	logger.Info("Reading credentials...")
-	username := space.Spec.Connection.Credentials.Username
+	username := config.Connection.Credentials.Username
 	secret := &corev1.Secret{}
-	passwordRef := space.Spec.Connection.Credentials.PasswordRef
+	passwordRef := config.Connection.Credentials.PasswordRef
 	err = r.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: passwordRef}, secret)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("error while reading credentials: %w", err)
 	}
 	password := string(secret.Data[username])
 
-	logger.Info("Reading current spaces...")
-	var currentSpaces []Space
-	url := space.Spec.Connection.URL + "/api/spaces/space"
-	err = GetRequest(logger, url, username, password, nil, &currentSpaces)
+	logger.Info("Reading current values...")
+	err = GetRequest(logger, url, username, password, nil, &actualValues)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("error while reading current spaces error: %w", err)
+		return ctrl.Result{}, fmt.Errorf("error while reading current values error: %w", err)
 	}
-	currentSpaceIdToSpace := make(map[string]Space)
-	for _, currentSpace := range currentSpaces {
+	logger.Info("Found <" + strconv.Itoa(len(actualValues)) + "> values")
+
+	for _, currentSpace := range actualValues {
 		if strings.HasPrefix(currentSpace.Id, prefix) && strings.HasSuffix(currentSpace.Id, suffix) {
-			currentSpaceIdToSpace[currentSpace.Id] = currentSpace
+			actualKeyToValue[currentSpace.Id] = currentSpace
 		}
 	}
-	logger.Info("Found <" + strconv.Itoa(len(currentSpaces)) + "> spaces")
-	logger.Info("Found <" + strconv.Itoa(len(currentSpaceIdToSpace)) + "> matching spaces")
+	logger.Info("Found <" + strconv.Itoa(len(actualKeyToValue)) + "> matching values")
 
-	logger.Info("Synchronizing current/expected spaces...")
-	expectedSpaces := space.Spec.Spaces
-	for _, expectedSpace := range expectedSpaces {
-		spaceId := GetFullName(prefix, expectedSpace.Id, suffix)
-		logger.Info("Processing space <" + spaceId + ">...")
-		if _, ok := currentSpaceIdToSpace[spaceId]; ok {
-			logger.Info("Updating current space <" + spaceId + ">...")
-			_, err = UpdateSpace(logger, url, username, password, spaceId, expectedSpace)
+	var created int32 = 0
+	var updated int32 = 0
+	logger.Info("Synchronizing current/expected values...")
+	for _, expectedValue := range expectedValues {
+		id := GetFullName(prefix, expectedValue.Id, suffix)
+		logger.Info("Processing value <" + id + ">...")
+		if _, ok := actualKeyToValue[id]; ok {
+			logger.Info("Updating current value <" + id + ">...")
+			_, err = UpdateSpace(logger, url, username, password, id, expectedValue)
 			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("error while updating space: %w", err)
+				return ctrl.Result{}, fmt.Errorf("error while updating value: %w", err)
 			}
+			updated += 1
 		} else {
-			logger.Info("Creating expected space <" + spaceId + ">...")
-			_, err = CreateSpace(logger, url, username, password, spaceId, expectedSpace)
+			logger.Info("Creating expected space <" + id + ">...")
+			_, err = CreateSpace(logger, url, username, password, id, expectedValue)
 			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("error while creating space: %w", err)
+				return ctrl.Result{}, fmt.Errorf("error while creating value: %w", err)
 			}
+			created += 1
 		}
 	}
 
-	// TODO set status
+	// Update status if needed
+	if (created + updated) > 0 {
+		space.Status.Created += created
+		// TODO add deep equals check to update before updating value to avoid endless loop
+		// space.Status.Updated += updated
+		err := r.Status().Update(ctx, space)
+		if err != nil {
+			logger.Error(err, "Failed to update status")
+			return ctrl.Result{}, err
+		}
+	}
+
 	return ctrl.Result{}, nil
 }
 

@@ -22,11 +22,7 @@ import (
 
 // SpaceSpec defines the desired state of Space
 type SpaceSpec struct {
-	Prefix string `json:"prefix,omitempty"`
-
-	Suffix string `json:"suffix,omitempty"`
-
-	Connection Connection `json:"connection,omitempty"`
+	Config `json:",inline"`
 
 	Spaces []KibanaSpace `json:"spaces,omitempty"`
 }
@@ -43,8 +39,8 @@ type KibanaSpace struct {
 
 // SpaceStatus defines the observed state of Space
 type SpaceStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Created int32 `json:"created,omitempty"`
+	Updated int32 `json:"updated,omitempty"`
 }
 
 //+kubebuilder:object:root=true

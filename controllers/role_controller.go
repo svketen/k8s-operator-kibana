@@ -81,54 +81,71 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	prefix := role.Spec.Prefix
 	suffix := role.Spec.Suffix
 	namespace := role.Namespace
+	config := role.Spec.Config
+	expectedValues := role.Spec.Roles
+	var actualValues []Role
+	url := config.Connection.URL + "/api/security/role"
+	actualKeyToValue := make(map[string]Role)
 
 	logger.Info("Reading credentials...")
-	username := role.Spec.Connection.Credentials.Username
+	username := config.Connection.Credentials.Username
 	secret := &corev1.Secret{}
-	passwordRef := role.Spec.Connection.Credentials.PasswordRef
+	passwordRef := config.Connection.Credentials.PasswordRef
 	err = r.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: passwordRef}, secret)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("error while reading credentials: %w", err)
 	}
 	password := string(secret.Data[username])
 
-	logger.Info("Reading current roles...")
-	var currentRoles []Role
-	url := role.Spec.Connection.URL + "/api/security/role"
-	err = GetRequest(logger, url, username, password, nil, &currentRoles)
+	logger.Info("Reading current values...")
+	err = GetRequest(logger, url, username, password, nil, &actualValues)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("error while reading current roles error: %w", err)
+		return ctrl.Result{}, fmt.Errorf("error while reading current values error: %w", err)
 	}
-	currentRoleNameToRole := make(map[string]Role)
-	for _, currentRole := range currentRoles {
-		if strings.HasPrefix(currentRole.Name, prefix) && strings.HasSuffix(currentRole.Name, suffix) {
-			currentRoleNameToRole[currentRole.Name] = currentRole
+	logger.Info("Found <" + strconv.Itoa(len(actualValues)) + "> values")
+
+	for _, actualValue := range actualValues {
+		if strings.HasPrefix(actualValue.Name, prefix) && strings.HasSuffix(actualValue.Name, suffix) {
+			actualKeyToValue[actualValue.Name] = actualValue
 		}
 	}
-	logger.Info("Found <" + strconv.Itoa(len(currentRoles)) + "> roles")
-	logger.Info("Found <" + strconv.Itoa(len(currentRoleNameToRole)) + "> matching roles")
+	logger.Info("Found <" + strconv.Itoa(len(actualKeyToValue)) + "> matching values")
 
-	logger.Info("Synchronizing current/expected roles...")
-	expectedRoles := role.Spec.Roles
-	for _, expectedRole := range expectedRoles {
-		roleName := GetFullName(prefix, expectedRole.Name, suffix)
-		logger.Info("Processing role <" + roleName + ">...")
-		if _, ok := currentRoleNameToRole[roleName]; ok {
-			logger.Info("Updating current role <" + roleName + ">...")
-			_, err = CreateOrUpdateRole(logger, url, username, password, roleName, expectedRole)
+	var created int32 = 0
+	var updated int32 = 0
+	logger.Info("Synchronizing current/expected values...")
+	for _, expectedValue := range expectedValues {
+		id := GetFullName(prefix, expectedValue.Name, suffix)
+		logger.Info("Processing value <" + id + ">...")
+		if _, ok := actualKeyToValue[id]; ok {
+			logger.Info("Updating current value <" + id + ">...")
+			_, err = CreateOrUpdateRole(logger, url, username, password, id, expectedValue)
 			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("error while updating role: %w", err)
+				return ctrl.Result{}, fmt.Errorf("error while updating value: %w", err)
 			}
+			updated += 1
 		} else {
-			logger.Info("Creating expected role <" + roleName + ">...")
-			_, err = CreateOrUpdateRole(logger, url, username, password, roleName, expectedRole)
+			logger.Info("Creating expected role <" + id + ">...")
+			_, err = CreateOrUpdateRole(logger, url, username, password, id, expectedValue)
 			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("error while creating role: %w", err)
+				return ctrl.Result{}, fmt.Errorf("error while creating value: %w", err)
 			}
+			created += 1
 		}
 	}
 
-	// TODO set status
+	// Update status if needed
+	if (created + updated) > 0 {
+		role.Status.Created += created
+		// TODO add deep equals check to update before updating value to avoid endless loop
+		// role.Status.Updated += updated
+		err := r.Status().Update(ctx, role)
+		if err != nil {
+			logger.Error(err, "Failed to update status")
+			return ctrl.Result{}, err
+		}
+	}
+
 	return ctrl.Result{}, nil
 }
 

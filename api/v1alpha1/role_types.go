@@ -22,27 +22,9 @@ import (
 
 // RoleSpec defines the desired state of Role
 type RoleSpec struct {
-	Prefix string `json:"prefix,omitempty"`
-
-	Suffix string `json:"suffix,omitempty"`
-
-	Connection Connection `json:"connection,omitempty"`
+	Config `json:",inline"`
 
 	Roles []KibanaRole `json:"roles,omitempty"`
-}
-
-type Connection struct {
-	Credentials `json:",inline"`
-
-	URL string `json:"url,omitempty"`
-
-	Port int32 `json:"port,omitempty"`
-}
-
-type Credentials struct {
-	Username string `json:"username,omitempty"`
-
-	PasswordRef string `json:"passwordRef,omitempty"`
 }
 
 type KibanaRole struct {
@@ -88,8 +70,8 @@ type KibanaFeature struct {
 
 // RoleStatus defines the observed state of Role
 type RoleStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Created int32 `json:"created,omitempty"`
+	Updated int32 `json:"updated,omitempty"`
 }
 
 //+kubebuilder:object:root=true

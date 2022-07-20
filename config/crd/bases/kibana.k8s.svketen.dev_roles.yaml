@@ -129,6 +129,13 @@ spec:
             type: object
           status:
             description: RoleStatus defines the observed state of Role
+            properties:
+              created:
+                format: int32
+                type: integer
+              updated:
+                format: int32
+                type: integer
             type: object
         type: object
     served: true
