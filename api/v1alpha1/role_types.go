@@ -73,6 +73,7 @@ type KibanaFeature struct {
 type RoleStatus struct {
 	Created int32 `json:"created,omitempty"`
 	Updated int32 `json:"updated,omitempty"`
+	Deleted int32 `json:"deleted,omitempty"`
 }
 
 //+kubebuilder:object:root=true

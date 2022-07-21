@@ -87,6 +87,7 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	url := config.Connection.URL + "/api/security/role"
 	actualKeyToValue := make(map[string]kibanav1alpha1.KibanaRole)
 
+	// TODO way to much duplicated code
 	logger.Info("Reading credentials...")
 	username := config.Connection.Credentials.Username
 	secret := &corev1.Secret{}
@@ -113,6 +114,7 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	var created int32 = 0
 	var updated int32 = 0
+	var deleted int32 = 0
 	logger.Info("Synchronizing current/expected values...")
 	for _, expectedValue := range expectedValues {
 		id := GetFullName(prefix, expectedValue.Name, suffix)
@@ -138,12 +140,31 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			}
 			created += 1
 		}
+		delete(actualKeyToValue, id)
+	}
+
+	// deletion is only possible if prefix or suffix is given
+	if len(prefix)+len(suffix) > 0 {
+		logger.Info("Found <" + strconv.Itoa(len(actualKeyToValue)) + "> outdated values")
+		for id, _ := range actualKeyToValue {
+			logger.Info("Deleting current value <" + id + ">...")
+			if role.Spec.Config.Delete {
+				_, err := DeleteRequest(logger, url+"/"+id, username, password)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				updated += 1
+			} else {
+				logger.Info("Deletion of outdated values is deactivated")
+			}
+		}
 	}
 
 	// Update status if needed
-	if (created + updated) > 0 {
+	if (created + updated + deleted) > 0 {
 		role.Status.Created += created
 		role.Status.Updated += updated
+		role.Status.Deleted += deleted
 		err := r.Status().Update(ctx, role)
 		if err != nil {
 			logger.Error(err, "Failed to update status")

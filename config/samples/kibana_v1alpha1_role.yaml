@@ -5,6 +5,7 @@ metadata:
 spec:
   prefix: 'my-'
   suffix: '-automated'
+  delete: true
   connection:
     username: elastic
     passwordRef: logging-es-elastic-user

@@ -21,6 +21,8 @@ type Config struct {
 
 	Suffix string `json:"suffix,omitempty"`
 
+	Delete bool `json:"delete,omitempty"`
+
 	Connection Connection `json:"connection,omitempty"`
 }
 

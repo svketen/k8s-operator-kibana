@@ -88,6 +88,7 @@ func (r *SpaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	url := config.Connection.URL + "/api/spaces/space"
 	actualKeyToValue := make(map[string]kibanav1alpha1.KibanaSpace)
 
+	// TODO way to much duplicated code
 	logger.Info("Reading credentials...")
 	username := config.Connection.Credentials.Username
 	secret := &corev1.Secret{}
@@ -114,6 +115,7 @@ func (r *SpaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	var created int32 = 0
 	var updated int32 = 0
+	var deleted int32 = 0
 	logger.Info("Synchronizing current/expected values...")
 	for _, expectedValue := range expectedValues {
 		id := GetFullName(prefix, expectedValue.Id, suffix)
@@ -139,12 +141,31 @@ func (r *SpaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			}
 			created += 1
 		}
+		delete(actualKeyToValue, id)
+	}
+
+	// deletion is only possible if prefix or suffix is given
+	if len(prefix)+len(suffix) > 0 {
+		logger.Info("Found <" + strconv.Itoa(len(actualKeyToValue)) + "> outdated values")
+		for id, _ := range actualKeyToValue {
+			logger.Info("Deleting current value <" + id + ">...")
+			if space.Spec.Config.Delete {
+				_, err := DeleteRequest(logger, url+"/"+id, username, password)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				updated += 1
+			} else {
+				logger.Info("Deletion of outdated values is deactivated")
+			}
+		}
 	}
 
 	// Update status if needed
-	if (created + updated) > 0 {
+	if (created + updated + deleted) > 0 {
 		space.Status.Created += created
 		space.Status.Updated += updated
+		space.Status.Deleted += deleted
 		err := r.Status().Update(ctx, space)
 		if err != nil {
 			logger.Error(err, "Failed to update status")
@@ -185,7 +206,7 @@ func CreateSpace(logger logr.Logger, url string, username string, password strin
 func UpdateSpace(logger logr.Logger, url string, username string, password string, spaceId string, spaceSpec kibanav1alpha1.KibanaSpace) ([]byte, error) {
 	space := kibanav1alpha1.KibanaSpace{}
 	space.Id = spaceId
-	space.Name = spaceId
+	space.Name = spaceSpec.Name
 	space.Description = spaceSpec.Description
 	space.DisabledFeatures = spaceSpec.DisabledFeatures
 

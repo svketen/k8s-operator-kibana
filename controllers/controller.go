@@ -76,6 +76,22 @@ func PostRequest(logger logr.Logger, url string, username string, password strin
 	return bodyText, nil
 }
 
+func DeleteRequest(logger logr.Logger, url string, username string, password string) ([]byte, error) {
+	logger.Info("Sending DELETE to <" + url + ">")
+
+	request, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	bodyText, err := SendRequest(logger, request, username, password)
+	if err != nil {
+		return nil, err
+	}
+
+	return bodyText, nil
+}
+
 func SendRequest(logger logr.Logger, request *http.Request, username string, password string) ([]byte, error) {
 	logger.Info("Sending request...")
 
