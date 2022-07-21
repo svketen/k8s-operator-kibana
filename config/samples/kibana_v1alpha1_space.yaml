@@ -6,6 +6,7 @@ spec:
   prefix: 'my-'
   suffix: '-automated'
   delete: true
+  repeat: 600
   connection:
     username: elastic
     passwordRef: logging-es-elastic-user

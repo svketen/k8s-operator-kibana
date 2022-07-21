@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"strconv"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -173,6 +174,9 @@ func (r *SpaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 	}
 
+	if space.Spec.Config.Repeat > 0 {
+		return ctrl.Result{RequeueAfter: time.Duration(space.Spec.Config.Repeat) * time.Second}, nil
+	}
 	return ctrl.Result{}, nil
 }
 

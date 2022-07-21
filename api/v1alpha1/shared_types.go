@@ -23,6 +23,8 @@ type Config struct {
 
 	Delete bool `json:"delete,omitempty"`
 
+	Repeat int32 `json:"repeat,omitempty"`
+
 	Connection Connection `json:"connection,omitempty"`
 }
 

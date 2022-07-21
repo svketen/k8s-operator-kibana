@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"strconv"
 	"strings"
+	"time"
 
 	kibanav1alpha1 "k8s.svketen.dev/api/v1alpha1"
 )
@@ -172,6 +173,9 @@ func (r *RoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	}
 
+	if role.Spec.Config.Repeat > 0 {
+		return ctrl.Result{RequeueAfter: time.Duration(role.Spec.Config.Repeat) * time.Second}, nil
+	}
 	return ctrl.Result{}, nil
 }
 
