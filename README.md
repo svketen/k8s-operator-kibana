@@ -1,7 +1,5 @@
 # k8s-operator-kibana
 
-#https://github.com/svketen/k8s-operator-kibana
-
 [![CodeQL](https://github.com/svketen/k8s-operator-kibana/actions/workflows/codeql.yml/badge.svg)](https://github.com/svketen/k8s-operator-kibana/actions/workflows/codeql.yml)
 
 Developing playground for k8s operator pattern with go.
